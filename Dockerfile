@@ -11,8 +11,15 @@ FROM faststart AS oracle-files
 USER root
 SHELL ["/bin/bash", "-c"]
 
+# CI runs a single XE instance; installer, RAC, SDK, and GUI/admin trees are
+# outside the tested runtime path. Remove them before the final COPY so their
+# bytes do not remain in a lower image layer. The shared-library removals are
+# covered by the Orafit Oracle 18c differential suite.
 RUN mkdir -p /export/opt/oracle /export/etc \
     && cp -a /opt/oracle/{product,admin,audit,cfgtoollogs,checkpoints,diag,oraInventory,.bash_profile,container-entrypoint.sh,createAppUser,healthcheck.sh,resetPassword} /export/opt/oracle/ \
+    && rm -rf /export/opt/oracle/product/18c/dbhomeXE/{addnode,clone,css,diagnostics,dv,mgw,oss,owm,racg,relnotes,sdk,slax,srvm,sqlj,usm,wwg} \
+    && rm -f /export/opt/oracle/product/18c/dbhomeXE/lib/libcrs18.so \
+    && rm -f /export/opt/oracle/product/18c/dbhomeXE/lib/libshpk*.so \
     && cp -a /etc/{oraInst.loc,oratab} /export/etc/
 
 FROM debian:bookworm-slim AS archive
@@ -86,7 +93,7 @@ RUN ln -s libaio.so.1.0.1 /opt/oracle/compat-lib/libaio.so.1 \
     && chmod 755 /usr/local/bin/docker-entrypoint-zstd.sh \
     && chmod 755 /opt/oracle/container-entrypoint.sh /opt/oracle/healthcheck.sh /opt/oracle/createAppUser /opt/oracle/resetPassword
 
-LABEL org.opencontainers.image.title="Oracle Database XE 18c on BusyBox with zstd-11 database data" \
+LABEL org.opencontainers.image.title="Oracle Database XE 18c on BusyBox with pruned Oracle Home and zstd-11 database data" \
       org.opencontainers.image.source="https://github.com/yukkes/oracle-xe"
 
 USER oracle
