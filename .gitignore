@@ -1,0 +1,3 @@
+target/
+*.tar.zst
+oracle-database-xe-18c-*.rpm
